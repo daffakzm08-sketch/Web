@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>IF Calculator</title>
+  <style>
+  @media (max-width: 768px) {
+  body {
+    font-size: 14px; /* teks lebih besar */
+  }
+  .container {
+    width: 95%;       /* biar tidak sempit */
+    padding: 15px;
+  }
+  .header {
+    font-size: 18px;  /* heading lebih besar */
+    padding: 20px;
+  }
+  button, input {
+    font-size: 16px;  /* tombol & input lebih besar */
+    padding: 10px;
+  }
+}
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 0;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      background-position: center;
+    }
+    .menu { position: fixed; top: 10px; left: 10px; font-size: 24px; cursor: pointer; z-index: 1000; color:#ffff;}
+    .sidebar {
+      height: 100%; width: 250px; position: fixed; top: 0; left: -550px;
+      background: #333; color: white; transition: left 0.4s ease; padding: 20px; z-index: 999;
+      overflow-y: auto;
+    }
+    .sidebar.open { left: 0; }
+    .sidebar h2 { margin-top: 0; }
+    .sidebar button {
+      display: block; margin: 10px 0; width: 100%; padding: 10px;
+      background: #4CAF50; border: none; color: white; border-radius: 5px; cursor: pointer;
+    }
+    .sidebar ul { list-style: none; padding: 0; }
+    .sidebar ul li { margin: 5px 0; padding: 5px; background: #444; border-radius: 5px; }
+    .contextMenu {
+      position: absolute; background: #444; color: white; padding: 10px;
+      border-radius: 5px; display: none; z-index: 1000;
+    }
+    .contextMenu button {
+      display: block; background: none; border: none; color: white;
+      padding: 5px; text-align: left; width: 100%; cursor: pointer;
+    }
+    .header { background: #4CAF50; color: white; text-align: center; padding: 15px; position: sticky; top: 0; }
+    .container {
+      background: rgba(255,255,255,0.9); padding: 20px; margin: 20px auto; border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 320px;
+    }
+    label { display: block; margin-top: 10px; }
+    input { width: 100%; padding: 5px; margin-top: 5px; }
+    button {
+      margin-top: 15px; width: 100%; padding: 10px; background: #4CAF50; color: white;
+      border: none; border-radius: 5px; cursor: pointer;
+    }
+    #result { margin-top: 20px; font-weight: bold; }
+    .colorBox {
+      width: 25px; height: 25px; display: inline-block; margin: 2px; cursor: pointer; border: 1px solid #fff;
+    }
+    /* Modal Box */
+    #modalBox, #targetModal {
+      display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center;
+    }
+    #modalContentBox, #targetModalBox {
+      background:#fff; padding:20px; border-radius:8px; max-width:400px; text-align:center;
+    }
+  </style>
+</head>
+<body>
+  <div class="menu"><span onclick="toggleSidebar()">☰</span></div>
+
+  <div id="sidebar" class="sidebar">
+    <h2 style="text-indent : 30px;">MENU</h2>
+    <button onclick="addTarget()">➕ Tambah </button>
+    <button onclick="changeBackground()"> Ganti Background</button>
+    <button onclick="toggleBackgroundMode()">⚙Mode Background</button>
+    <button onclick="toggleColorUI()">Ganti Warna</button>
+
+    <div id="colorPickerUI" style="display:none; margin-top:15px;">
+      <p>Pilih Warna Heading:</p>
+      <div id="headingColors"></div>
+      <input type="color" id="headingCustom" onchange="applyCustomColor('heading', this.value)">
+      
+      <p>Pilih Warna Tombol:</p>
+      <div id="buttonColors"></div>
+      <input type="color" id="buttonCustom" onchange="applyCustomColor('button', this.value)">
+    </div>
+
+    <ul id="targetList"></ul>
+    <div id="contextMenu" class="contextMenu"></div>
+  </div>
+
+  <div class="header">
+    <h2 id="targetDisplay">Target Primo: 0</h2>
+  </div>
+
+  <div class="container">
+    <h1>IF Calculator</h1>
+    <form id="gachaForm">
+       <input type="number" id="startPrimo" placeholder="Primogems Awal">
+       <input type="number" id="endPrimo" placeholder="Primogems Akhir">
+        <input type="number" id="startIF" placeholder="IF Awal">
+        <input type="number" id="endIF" placeholder="IF Akhir">
+
+      <button type="button" onclick="calculate()">Hitung</button>
+    </form>
+    <div id="result"></div>
+  </div>
+
+  <!-- Modal Box Info -->
+  <div id="modalBox">
+    <div id="modalContentBox">
+      <h3 id="modalTitle">Info</h3>
+      <pre id="modalContent" style="white-space:pre-wrap;"></pre>
+      <button onclick="closeModal()">Tutup</button>
+    </div>
+  </div>
+
+  <!-- Modal Input Target -->
+  <div id="targetModal">
+    <div id="targetModalBox">
+      <h3>Buat Baru</h3>
+      <label>Nomor Order:</label>
+      <input type="number" id="orderNumberInput" style="width:100%; margin-bottom:10px;">
+      <label>Jumlah IF :</label>
+      <input type="number" id="targetIFInput" style="width:100%; margin-bottom:10px;" >
+      <button onclick="saveTarget()">Simpan</button>
+      <button onclick="closeTargetModal()">Batal</button>
+    </div>
+  </div>
+
+<script>
+  let targets = JSON.parse(localStorage.getItem("targets")) || [];
+  let currentTargetIndex = 0;
+  let longPressTimer;
+  let currentBackgroundMode = "cover";
+
+  const basicColors = [
+    "#FF0000","#00FF00","#0000FF","#FFFF00","#FFA500","#800080",
+    "#FFC0CB","#A52A2A","#808080","#000000","#FFFFFF","#00FFFF"
+  ];
+
+  function toggleSidebar() {
+    let sidebar = document.getElementById("sidebar");
+    sidebar.classList.toggle("open");
+    if (!sidebar.classList.contains("open")) {
+      document.getElementById("contextMenu").style.display = "none";
+    }
+  }
+
+  // Modal Target
+  function addTarget() {
+    document.getElementById("targetModal").style.display = "flex";
+  }
+  function closeTargetModal() {
+    document.getElementById("targetModal").style.display = "none";
+  }
+  function saveTarget() {
+    let orderNumber = parseInt(document.getElementById("orderNumberInput").value) || 0;
+    let targetIF = parseInt(document.getElementById("targetIFInput").value) || 0;
+    let targetPrimo = targetIF * 160;
+    let newTarget = {
+      name: `Order ${orderNumber}`,
+      targetIF: targetIF,
+      targetPrimo: targetPrimo,
+      remainingTarget: targetPrimo,
+      history: [],
+      lastResult: ""
+    };
+    targets.push(newTarget);
+    localStorage.setItem("targets", JSON.stringify(targets));
+    loadTargets();
+    closeTargetModal();
+  }
+
+  function loadTargets() {
+    let targetList = document.getElementById("targetList");
+    targetList.innerHTML = "";
+    targets.forEach((t, index) => {
+      let li = document.createElement("li");
+      li.textContent = `${t.name} (${t.remainingTarget} primo tersisa)`;
+      li.style.cursor = "pointer";
+      li.onclick = () => switchTarget(index);
+
+      li.onmousedown = (e) => {
+        longPressTimer = setTimeout(() => {
+          showContextMenu(e.pageX, e.pageY, index);
+        }, 600);
+      };
+      li.onmouseup = () => clearTimeout(longPressTimer);
+
+      li.ontouchstart = (e) => {
+        longPressTimer = setTimeout(() => {
+          let touch = e.touches[0];
+          showContextMenu(touch.pageX, touch.pageY, index);
+        }, 600);
+      };
+      li.ontouchend = () => clearTimeout(longPressTimer);
+
+      targetList.appendChild(li);
+    });
+  }
+
+  function switchTarget(index) {
+    currentTargetIndex = index;
+    let target = targets[index];
+    document.getElementById("targetDisplay").innerText = `Target Primo: ${target.remainingTarget}`;
+    document.getElementById("result").innerText = target.lastResult || "";
+  }
+function calculate() {
+  let startPrimo = parseInt(document.getElementById("startPrimo").value) || 0;
+  let endPrimo   = parseInt(document.getElementById("endPrimo").value) || 0;
+  let startIF    = parseInt(document.getElementById("startIF").value) || 0;
+  let endIF      = parseInt(document.getElementById("endIF").value) || 0;
+
+  // Hitung selisih Primo
+  let gainedPrimo = endPrimo - startPrimo;
+  if (gainedPrimo < 0) gainedPrimo = 0;
+
+  // Hitung selisih IF lalu konversi ke Primo
+  let gainedIF = endIF - startIF;
+  if (gainedIF < 0) gainedIF = 0;
+  let gainedFromIF = gainedIF * 160;
+
+  // Total Primo didapat = selisih Primo + hasil konversi IF
+  let totalGainedPrimo = gainedPrimo + gainedFromIF;
+
+  // Update target
+  let target = targets[currentTargetIndex];
+  target.remainingTarget = target.remainingTarget - totalGainedPrimo;
+  if (target.remainingTarget < 0) target.remainingTarget = 0;
+
+  // Hitung pulls
+  let pullsGained = Math.floor(totalGainedPrimo / 160);
+  let pullsRemaining = Math.ceil(target.remainingTarget / 160);
+
+  // Tampilkan hasil
+  let resultText =
+    `📊 Hasil (${target.name}):\n` +
+    `Primo didapat: ${gainedPrimo}\n` +
+    `IF didapat: ${gainedIF} → setara ${gainedFromIF} primogems\n` +
+    `Total Primo didapat: ${totalGainedPrimo}\n` +
+    `Setara dengan: ${pullsGained} IF\n` +
+    `Sisa target: ${target.remainingTarget} primogems\n` +
+    `Setara dengan: ${pullsRemaining} IF`;
+
+  target.lastResult = resultText;
+  target.history.push({ 
+    date: new Date().toLocaleDateString("id-ID"), 
+    gained: totalGainedPrimo 
+  });
+
+  document.getElementById("targetDisplay").innerText = `Target Primo: ${target.remainingTarget}`;
+  document.getElementById("result").innerText = resultText;
+
+  localStorage.setItem("targets", JSON.stringify(targets));
+  loadTargets();
+}
+  function showContextMenu(x, y, index) {
+    let menu = document.getElementById("contextMenu");
+    menu.innerHTML = `
+      <button onclick="deleteTarget(${index})">️ Hapus</button>
+      <button onclick="showHistory(${index})"> History</button>
+    `;
+    menu.style.left = x + "px";
+    menu.style.top = y + "px";
+    menu.style.display = "block";
+
+    document.addEventListener("click", (e) => {
+      if (!menu.contains(e.target)) {
+        menu.style.display = "none";
+      }
+    }, { once: true });
+  }
+
+  function deleteTarget(index) {
+    targets.splice(index, 1);
+    localStorage.setItem("targets", JSON.stringify(targets));
+    loadTargets();
+    document.getElementById("contextMenu").style.display = "none";
+    if (targets.length > 0) {
+      switchTarget(0);
+    } else {
+      document.getElementById("targetDisplay").innerText = "Target Primo: 0";
+      document.getElementById("result").innerText = "";
+    }
+  }
+
+  // 🔧 Modal Box Info
+  function showModal(title, content) {
+    document.getElementById("modalTitle").innerText = title;
+    document.getElementById("modalContent").innerText = content;
+    document.getElementById("modalBox").style.display = "flex";
+  }
+  function closeModal() {
+    document.getElementById("modalBox").style.display = "none";
+  }
+
+  function showHistory(index) {
+    let target = targets[index];
+    if (target.history.length === 0) {
+      showModal("History Kosong", "Belum ada history untuk " + target.name);
+    } else {
+      let historyText = target.history.map(h => `${h.date} → ${h.gained} primogems`).join("\n");
+      showModal("History " + target.name, historyText);
+    }
+    document.getElementById("contextMenu").style.display = "none";
+  }
+
+  function changeBackground() {
+    let input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = function(event) {
+      let file = event.target.files[0];
+      if (file) {
+        let reader = new FileReader();
+        reader.onload = function(e) {
+          document.body.style.backgroundImage = `url('${e.target.result}')`;
+          document.body.style.backgroundSize = currentBackgroundMode;
+          document.body.style.backgroundRepeat = "no-repeat";
+          document.body.style.backgroundAttachment = "fixed";
+          document.body.style.backgroundPosition = "center";
+
+          localStorage.setItem("backgroundImage", e.target.result);
+          localStorage.setItem("backgroundMode", currentBackgroundMode);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
+  }
+
+  function toggleBackgroundMode() {
+    if (currentBackgroundMode === "cover") {
+      currentBackgroundMode = "contain";
+    } else {
+      currentBackgroundMode = "cover";
+    }
+    document.body.style.backgroundSize = currentBackgroundMode;
+    localStorage.setItem("backgroundMode", currentBackgroundMode);
+  }
+
+  function toggleColorUI() {
+    const ui = document.getElementById("colorPickerUI");
+    if (ui.style.display === "none") {
+      ui.style.display = "block";
+    } else {
+      ui.style.display = "none";
+    }
+  }
+
+  function initColorUI() {
+    const headingDiv = document.getElementById("headingColors");
+    const buttonDiv = document.getElementById("buttonColors");
+
+    basicColors.forEach(color => {
+      let hBox = document.createElement("div");
+      hBox.className = "colorBox";
+      hBox.style.background = color;
+      hBox.onclick = () => applyColor("heading", color);
+      headingDiv.appendChild(hBox);
+
+      let bBox = document.createElement("div");
+      bBox.className = "colorBox";
+      bBox.style.background = color;
+      bBox.onclick = () => applyColor("button", color);
+      buttonDiv.appendChild(bBox);
+    });
+  }
+
+  function applyColor(targetElement, color) {
+    if (targetElement === "heading") {
+      document.querySelector(".header").style.backgroundColor = color;
+      localStorage.setItem("headingColor", color);
+    } else if (targetElement === "button") {
+      document.querySelectorAll("button").forEach(btn=>{
+        btn.style.backgroundColor = color;
+      });
+      localStorage.setItem("buttonColor", color);
+    }
+  }
+
+  function applyCustomColor(targetElement, color) {
+    applyColor(targetElement, color);
+  }
+  window.onload = function() {
+    if (targets.length === 0) addTarget();
+    loadTargets();
+    switchTarget(0);
+    initColorUI();
+
+    // Pulihkan warna heading
+    let savedHeading = localStorage.getItem("headingColor");
+    if (savedHeading) {
+      document.querySelector(".header").style.backgroundColor = savedHeading;
+    }
+
+    // Pulihkan warna tombol
+    let savedButton = localStorage.getItem("buttonColor");
+    if (savedButton) {
+      document.querySelectorAll("button").forEach(btn=>{
+        btn.style.backgroundColor = savedButton;
+      });
+    }
+
+    // Pulihkan background
+    let savedBg = localStorage.getItem("backgroundImage");
+    if (savedBg) {
+      document.body.style.backgroundImage = `url('${savedBg}')`;
+      document.body.style.backgroundSize = localStorage.getItem("backgroundMode") || "cover";
+      document.body.style.backgroundRepeat = "no-repeat";
+      document.body.style.backgroundAttachment = "fixed";
+      document.body.style.backgroundPosition = "center";
+    }
+  };
+</script>
+</body>
+</html>
