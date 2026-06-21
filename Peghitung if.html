@@ -80,12 +80,30 @@
       background:#fff; padding:20px; border-radius:8px; max-width:400px; text-align:center;
     }
   </style>
+   
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jwt-decode/3.1.2/jwt-decode.min.js"></script>
 </head>
 <body>
   <div class="menu"><span onclick="toggleSidebar()">☰</span></div>
 
   <div id="sidebar" class="sidebar">
     <h2 style="text-indent : 30px;">MENU</h2>
+    <!-- Google Sign-In -->
+  <div id="g_id_onload"
+     data-client_id="243335245255-0gjrbr079dmbp163cumj5a1m2pqr09qr.apps.googleusercontent.com"
+     data-context="signin"
+     data-ux_mode="popup"
+     data-callback="handleCredentialResponse">
+</div>
+  <div class="g_id_signin" data-type="standard"></div>
+
+  <!-- Profil User -->
+  <div id="userProfile" style="margin-top:15px; display:none; text-align:center;">
+  <img id="userPic" src="" alt="Foto Profil"
+       style="width:60px; height:60px; border-radius:50%; object-fit:cover;"><br>
+  <span id="userEmail" style="font-size:14px; color:#fff;"></span>
+  </div>
     <button onclick="addTarget()">➕ Tambah </button>
     <button onclick="changeBackground()"> Ganti Background</button>
     <button onclick="toggleBackgroundMode()">⚙Mode Background</button>
@@ -143,7 +161,6 @@
       <button onclick="closeTargetModal()">Batal</button>
     </div>
   </div>
-
 <script>
   let targets = JSON.parse(localStorage.getItem("targets")) || [];
   let currentTargetIndex = 0;
@@ -162,7 +179,6 @@
       document.getElementById("contextMenu").style.display = "none";
     }
   }
-
   // Modal Target
   function addTarget() {
     document.getElementById("targetModal").style.display = "flex";
@@ -427,6 +443,57 @@ function calculate() {
       document.body.style.backgroundRepeat = "no-repeat";
       document.body.style.backgroundAttachment = "fixed";
       document.body.style.backgroundPosition = "center";
+    }
+  };
+  function handleCredentialResponse(response) {
+  const data = jwt_decode(response.credential);
+  const email = data.email;
+  const picture = data.picture; // URL foto profil Google (bisa JPG, PNG, GIF, live photo)
+
+  // Simpan ke localStorage
+  localStorage.setItem("userEmail", email);
+  localStorage.setItem("userPic", picture);
+  // Tampilkan di sidebar
+  document.getElementById("userProfile").style.display = "block";
+  document.getElementById("userEmail").innerText = email;
+  document.getElementById("userPic").src = picture;
+  // Sinkronisasi data localStorage ke cloud
+  syncTargetsToCloud(email, targets);
+}
+  function syncTargetsToCloud(email, targets) {
+    // Contoh pseudo-code: upload ke Firebase Firestore
+    // firebase.firestore().collection("users").doc(email).set({ targets: targets });
+    console.log("Data tersimpan untuk:", email, targets);
+  }
+
+  function loadTargetsFromCloud(email) {
+    // Contoh pseudo-code: ambil dari Firebase Firestore
+    // firebase.firestore().collection("users").doc(email).get().then(doc => { ... });
+    console.log("Data dipulihkan untuk:", email);
+  }
+  window.onload = function() {
+  let email = localStorage.getItem("userEmail");
+  let picture = localStorage.getItem("userPic");
+
+  if (email && picture) {
+    document.getElementById("userProfile").style.display = "block";
+    document.getElementById("userEmail").innerText = email;
+    document.getElementById("userPic").src = picture;
+    loadTargetsFromCloud(email);
+  } else {
+    loadTargets();
+    switchTarget(0);
+  }
+};
+
+  window.onload = function() {
+    let email = localStorage.getItem("userEmail");
+    if (email) {
+      loadTargetsFromCloud(email);
+    } else {
+      // fallback ke localStorage biasa
+      loadTargets();
+      switchTarget(0);
     }
   };
 </script>
